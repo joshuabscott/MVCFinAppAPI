@@ -1,55 +1,110 @@
 ﻿using Newtonsoft.Json;
 using Npgsql;
-using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
-using MVCFinAppAPI.Enums;
+using Microsoft.Extensions.Configuration;
 using MVCFinAppAPI.Models;
 using MVCFinAppAPI.Utilities;
 
 namespace MVCFinAppAPI.Data
 {
+    /// <summary>
+    /// 
+    /// </summary>
     public class ApiDbContext : DbContext
     {
-        public ApiDbContext(DbContextOptions<ApiDbContext> options)
-            : base(options)
+        private readonly IConfiguration _configuration;
+        public ApiDbContext(DbContextOptions<ApiDbContext> options, IConfiguration configuration)
+         : base(options)
         {
+            _configuration = configuration;
         }
-        //Add our first method to call a Postgres Function
-        public List<HouseHold> GetAllHouseHoldData(IConfiguration configuration)
+        private dynamic CallPostgresFunction(string funcName)
         {
-            //1. I need an open connection string
-            //var connString = NpgsqlConnection(configuration.GetConnectionString("DefauaultConnection"));
-            var connString = new NpgsqlConnection(DataHelper.GetConnectionString(configuration));
-            connString.Open();
-
-            //2. I need an empty List in case there aren't any in the DB
-            var allHouseholds = new List<HouseHold>();
-
-            //3. this is where I tell npgsql what function to call
-            using (var cmd = new NpgsqlCommand("getallhosueholddata", connString))
+            var connection = new NpgsqlConnection(ConnectionService.GetConnectionString(_configuration));
+            connection.Open();
+            using (var cmd = new NpgsqlCommand(funcName, connection))
             {
                 cmd.CommandType = CommandType.StoredProcedure;
-
-                //4. Here is where it is called and the data is stored into an NpgsqlDataReeader
                 using (var reader = cmd.ExecuteReader())
                 {
                     var dataTable = new DataTable();
                     dataTable.Load(reader);
                     if (dataTable.Rows.Count > 0)
                     {
-                        var serializedMyObjects = JsonConvert.SerializeObject(dataTable);
-                        allHouseholds.AddRange((List<HouseHold>)JsonConvert.DeserializeObject(serializedMyObjects, typeof(List<HouseHold>)));
+                        return JsonConvert.SerializeObject(dataTable);
                     }
                 }
-                connString.Close();
+                connection.Close();
             }
-            return allHouseholds;
+            return string.Empty;
         }
+        public List<Household> GetAllHouseholdData()
+        {
+            var rawData = CallPostgresFunction("getallhouseholddata");
+            return (List<Household>)JsonConvert.DeserializeObject(rawData, typeof(List<Household>));
+        }
+        public List<PortalUser> GetAllUserData()
+        {
+            var rawData = CallPostgresFunction("getallusers");
+            return (List<FAUser>)JsonConvert.DeserializeObject(rawData, typeof(List<FAUser>));
+        }
+    }
+
+
+//using Newtonsoft.Json;
+//using Npgsql;
+//using System;
+//using System.Collections.Generic;
+//using System.Data;
+//using System.Linq;
+//using System.Threading.Tasks;
+//using Microsoft.Extensions.Configuration;
+//using Microsoft.EntityFrameworkCore;
+//using MVCFinAppAPI.Enums;
+//using MVCFinAppAPI.Models;
+//using MVCFinAppAPI.Utilities;
+
+//namespace MVCFinAppAPI.Data
+//{
+//    public class ApiDbContext : DbContext
+//    {
+//        public ApiDbContext(DbContextOptions<ApiDbContext> options)
+//            : base(options)
+//        {
+//        }
+//        //Add our first method to call a Postgres Function
+//        public List<HouseHold> GetAllHouseHoldData(IConfiguration configuration)
+//        {
+//            //1. I need an open connection string
+//            //var connString = NpgsqlConnection(configuration.GetConnectionString("DefauaultConnection"));
+//            var connString = new NpgsqlConnection(DataHelper.GetConnectionString(configuration));
+//            connString.Open();
+
+//            //2. I need an empty List in case there aren't any in the DB
+//            var allHouseholds = new List<HouseHold>();
+
+//            //3. this is where I tell npgsql what function to call
+//            using (var cmd = new NpgsqlCommand("getallhosueholddata", connString))
+//            {
+//                cmd.CommandType = CommandType.StoredProcedure;
+
+//                //4. Here is where it is called and the data is stored into an NpgsqlDataReeader
+//                using (var reader = cmd.ExecuteReader())
+//                {
+//                    var dataTable = new DataTable();
+//                    dataTable.Load(reader);
+//                    if (dataTable.Rows.Count > 0)
+//                    {
+//                        var serializedMyObjects = JsonConvert.SerializeObject(dataTable);
+//                        allHouseholds.AddRange((List<HouseHold>)JsonConvert.DeserializeObject(serializedMyObjects, typeof(List<HouseHold>)));
+//                    }
+//                }
+//                connString.Close();
+//            }
+//            return allHouseholds;
+//        }
 
         public List<FAUser> GetAllUsers(IConfiguration configuration)
         {

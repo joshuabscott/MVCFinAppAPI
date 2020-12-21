@@ -1,0 +1,22 @@
+﻿﻿.swagger-ui .topbar {
+    padding: 10px 0;
+    background-color: #191e3a;
+}
+
+body {
+    background-color: #f1f2f3 !important;
+}
+
+.topbar-wrapper img[alt="Swagger UI"] {
+    content: url('../rock.png');
+}
+
+.topbar-wrapper .link:after {
+    margin-left: 1rem;
+    content: " Smart Money";
+    width: auto !important;
+}
+
+#swagger-ui > section > div.topbar > div > div > form {
+    display: none;
+}
